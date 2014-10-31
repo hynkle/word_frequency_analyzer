@@ -54,28 +54,29 @@
     </div>
 
     <ol class="joyride-list" data-joyride>
-      <li data-button="All right!" data-options="prev_button: false">
+      <li data-button="How exciting!" data-options="prev_button: false">
         <p>This tool isn't particularly complicated, but let me take you on a quick tour.</p>
       </li>
-      <li data-id="text" data-text="Next" data-options="tip_location: left" data-prev-text="Previous">
+      <li data-id="text" data-text="Next" data-options="tip_location: left; prev_button: false">
         <p>First, paste the text you'd like to analyze here.  I'll start you out with the UN's Universal Declaration of Human Rights.</p>
       </li>
-      <li data-id="stop-words" data-text="Next" data-options="tip_location: right" data-prev-text="Previous">
+      <li data-id="stop-words" data-text="Next" data-options="tip_location: right; prev_button: false"> 
         <p>Enter a list of stop words (words you don't care about) here. You can separate them with newlines or spaces. I'll start you out with a sensible list of defaults.</p>
       </li>
-      <li data-id="analyze" data-button="Next" data-prev-text="Previous" data-options="tip_location:top;tip_animation:fade">
+      <li data-id="analyze" data-button="Next" data-options="tip_location:top;tip_animation:fade; prev_button: false">
         <p>Click the big button.</p>
       </li>
-      <li data-id="frequencies" data-button="Next" data-prev-text="Previous" data-options="tip_location:top;tip_animation:fade">
+      <li data-id="frequencies" data-button="Next" data-options="tip_location:top;tip_animation:fade; prev_button: false">
         <p>The frequency analysis will show up below.</p>
       </li>
-      <li data-button="Sounds good!" data-prev-text="Previous">
-        <p>Anytime you change the text or the stop words, just hit the button again and the analysis will be re-run.</p>
+      <li data-button="Sounds good!" data-options="prev_button: false">
+        <p>Whenever you change the text or the stop words, just hit the button again and the analysis will be re-run.</p>
       </li>
     </ol>
 
-    <script src="underscore-min.js"></script>
+    <script src="underscore.min.js"></script>
     <script src="jquery.min.js"></script>
+    <script src="jquery.cookie.js"></script>
     <script src="foundation.min.js"></script>
     <script src="foundation.joyride.min.js"></script>
     <script src="harmony-collections.min.js"></script>
@@ -109,22 +110,32 @@
       }
 
       jQuery(function(){
-
+        var stopWordsElem = $('#stop-words');
+        var stopWords = $.cookie('hynkle-word-frequency-stop-words');
+        stopWordsElem.val(stopWords);
+        stopWordsElem.on('change', function(event) {
+          var words = stopWordsElem.val();
+          $.cookie('hynkle-word-frequency-stop-words', words, { expires: 365 });
+        });
+        
         var analyzeButton = $('#analyze');
 
         analyzeButton.on('click', function(event) {
           event.preventDefault();
 
+          analyzeButton.attr('disabled', true);
+          $('#frequencies-container').hide();
+
           var textElem = $('#text');
           var text = textElem.val();
           var words = tokenize(text);
 
-          var stopWordsElem = $('#stop-words');
           var stopWords = new Set(tokenize(stopWordsElem.val()));
 
           words = _(words).reject(function(word) {
-            return stopWords.has(word) ||    // in the list of stop words
-              word.match(/^\d+(\.\d+)?$/);   // numeric word like 343 and 3.43
+            return stopWords.has(word) ||       // in the list of stop words
+              word.match(/^\d+(\.\d+)?$/) ||    // numeric word like 343 and 3.43
+              word.match(/^\s*$/);              // nothing but space
           });
 
           var frequenciesByWord = _.chain(words)
@@ -163,6 +174,7 @@
               });
             });
 
+          analyzeButton.attr('disabled', false);
           jQuery('#frequencies tbody').replaceWith(tbody);
           $('#frequencies-container').show();
         });
@@ -171,13 +183,18 @@
         jQuery(document)
         .foundation({
           joyride: {
+            cookie_monster: true,
+            cookie_name: 'hynkle-word-frequency-tour',
+            
             post_step_callback: function(step) {
               if (step == 1) {  // text
                 var text = $('#declaration-of-human-rights').text();
                 jQuery('#text').val(text);
               } else if (step == 2) {  // stop words
                 var stopWords = jQuery('#sample-stop-words').text();
-                jQuery('#stop-words').val(stopWords);
+                jQuery('#stop-words')
+                  .val(stopWords)
+                  .trigger('change');  // to make it so the cookie gets set
               } else if (step == 3) {  // the button
                 analyzeButton.trigger('click');
               }
@@ -189,13 +206,9 @@
 
       });
 
-      function setSampleText() {
-        console.log('set sample text');
-      }
-
     </script>
 
-    <script id="sample-stop-words" type="text/plain">a, able, about, across, after, all, almost, also, am, among, an, and, any, are, as, at, be, because, been, but, by, can, can't, cannot, could, couldn't, dear, did, didn't, do, does, doesn't, don't, either, else, ever, every, for, from, get, got, had, hadn't, has, hasn't, have, haven't, he, he'd, he's, her, hers, him, his, how, however, I, I'd, I've, if, in, into, is, it, it's, its, just, least, let, like, likely, may, me, might, most, must, my, neither, no, nor, not, of, off, often, on, only, or, other, ought, our, own, rather, said, shall, she, she'd, she's, should, shouldn't, since, so, some, than, that, the, their, them, then, there, these, they, they'd, they've, this, to, too, us, wants, was, we, we'd, we've, were, weren't, what, when, where, which, while, who, whom, why, will, with, would, wouldn't, yet, you, you'd, you've, your</script>
+    <script id="sample-stop-words" type="text/plain">a, able, about, across, after, all, almost, also, am, among, an, and, any, are, as, at, be, because, been, but, by, can, can't, cannot, could, couldn't, dear, did, didn't, do, does, doesn't, don't, either, else, ever, every, for, from, get, got, had, hadn't, has, hasn't, have, haven't, he, he'd, he'll, he's, her, hers, him, his, how, however, I, I'd, I'm, I've, if, in, in out, into, is, it, it's, its, just, least, let, like, likely, may, me, might, most, must, my, neither, no, nor, not, of, off, often, on, one, only, or, other, ought, our, own, rather, said, shall, she, she'd, she's, should, shouldn't, since, so, some, than, that, that's, the, their, them, then, there, these, they, they'd, they've, this, those, to, too, up, us, wants, was, we, we'd, we'll, we're, we've, were, weren't, what, when, where, which, while, who, whom, why, will, with, would, wouldn't, yes, yet, you, you'd, you've, your</script>
 
     <script id="declaration-of-human-rights" type="text/plain">Article 1.
 
