@@ -25,8 +25,180 @@
   <div class="row">
     <div id="text-container" class="large-9 columns">
       <h4>Text</h4>
-      <textarea id="text">
-Article 1.
+      <textarea id="text"></textarea>
+    </div>
+    <div id="stop-words-container" class="large-3 columns">
+      <h4>Stop Words</h4>
+      <textarea id="stop-words"></textarea>
+    </div>
+  </div>
+
+  <div class="row">
+    <div class="large-12 columns">
+      <a id="analyze" href="#" class="button expand">Analyze Frequencies</a>
+    </div>
+  <div class="row">
+    <div id="frequencies-container" style="display: none" class="large-12 columns">
+      <h4>Frequency Analysis</h4>
+      <table id="frequencies">
+        <thead>
+          <tr>
+            <th>Word</th>
+            <th>Count</th>
+          </td>
+        </thead>
+        <tbody>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <ol class="joyride-list" data-joyride>
+    <li data-button="All right!" data-options="prev_button: false">
+      <p>This tool isn't particularly complicated, but let me take you on a quick tour.</p>
+    </li>
+    <li data-id="text" data-text="Next" data-options="tip_location: left" data-prev-text="Previous">
+      <p>First, paste the text you'd like to analyze here.  I'll start you out with the UN's Universal Declaration of Human Rights.</p>
+    </li>
+    <li data-id="stop-words" data-text="Next" data-options="tip_location: right" data-prev-text="Previous">
+      <p>Enter a list of stop words (words you don't care about) here. You can separate them with newlines or spaces. I'll start you out with a sensible list of defaults.</p>
+    </li>
+    <li data-id="analyze" data-button="Next" data-prev-text="Previous" data-options="tip_location:top;tip_animation:fade">
+      <p>Click the big button.</p>
+    </li>
+    <li data-id="frequencies" data-button="Next" data-prev-text="Previous" data-options="tip_location:top;tip_animation:fade">
+      <p>The frequency analysis will show up below.</p>
+    </li>
+    <li data-button="Sounds good!" data-prev-text="Previous">
+      <p>Anytime you change the text or the stop words, just hit the button again and the analysis will be re-run.</p>
+    </li>
+  </ol>
+
+  <script src="//cdnjs.cloudflare.com/ajax/libs/underscore.js/1.7.0/underscore-min.js"></script>
+  <script src="//code.jquery.com/jquery-1.11.1.min.js"></script>
+  <script src="//cdnjs.cloudflare.com/ajax/libs/backbone.js/1.1.2/backbone-min.js"></script>
+  <script src="//cdnjs.cloudflare.com/ajax/libs/foundation/5.4.7/js/foundation.min.js"></script>
+  <script src="//cdnjs.cloudflare.com/ajax/libs/foundation/5.4.7/js/foundation/foundation.joyride.min.js"></script>
+  <script src="harmony-collections.min.js"></script>
+    <script>
+
+      // polyfill String#trim
+      if (!String.prototype.trim) {
+        (function(){
+          // Make sure we trim BOM and NBSP
+          var rtrim = /^[\s\uFEFF\xA0]+|[\s\uFEFF\xA0]+$/g;
+          String.prototype.trim = function () {
+            return this.replace(rtrim, "");
+          }
+        })();
+      }
+
+      function tokenize(text) {
+        text = text.toLowerCase();
+        text = text.replace(/--|–|—/, ' '); // treat dashes as word boundaries
+
+        text = text.trim();
+        var words = text.split(/\s+/);
+
+        words = _(words).map(function(word) {
+          word = word.replace(/^\W*/, '');  // remove all leading non-word characters
+          word = word.replace(/\W*$/, '');  // remove all trailing non-word characters
+          return word;
+        });
+
+        return words;
+      }
+
+      jQuery(function(){
+
+        var analyzeButton = $('#analyze');
+
+        analyzeButton.on('click', function(event) {
+          event.preventDefault();
+
+          var textElem = $('#text');
+          var text = textElem.val();
+          var words = tokenize(text);
+
+          var stopWordsElem = $('#stop-words');
+          var stopWords = new Set(tokenize(stopWordsElem.val()));
+
+          words = _(words).reject(function(word) {
+            return stopWords.has(word) ||    // in the list of stop words
+              word.match(/^\d+(\.\d+)?$/);   // numeric word like 343 and 3.43
+          });
+
+          var frequenciesByWord = _.chain(words)
+            .countBy(function(word){
+              return word;
+            })
+
+          var frequenciesByCount = _.chain(frequenciesByWord)
+            .pairs()
+            .reduce(function(h, word_and_count){
+              var word = word_and_count[0];
+              var count = word_and_count[1];
+              if (!h[count]) {
+                h[count] = [];
+              }
+              h[count].push(word);
+              return h;
+            }, {});
+
+
+          var tbody = jQuery('<tbody></tbody>');
+          var rowTemplate = _.template("<tr><td><%- word %></td><td><%= count %></td></tr>");
+          _.chain(frequenciesByCount)
+            .pairs()
+            .sortBy(function(count_and_words) {
+              var count = count_and_words[0];
+              return -count;
+            })
+            .each(function(count_and_words) {
+              var count = count_and_words[0];
+              var words = count_and_words[1];
+              words.sort();
+              _(words).each(function(word) {
+                var rowHtml = rowTemplate({count: count, word: word});
+                jQuery(rowHtml).appendTo(tbody);
+              });
+            });
+
+          jQuery('#frequencies tbody').replaceWith(tbody);
+          $('#frequencies-container').show();
+        });
+
+
+        jQuery(document)
+        .foundation({
+          joyride: {
+            post_step_callback: function(step) {
+              if (step == 1) {  // text
+                var text = $('#declaration-of-human-rights').text();
+                jQuery('#text').val(text);
+              } else if (step == 2) {  // stop words
+                var stopWords = jQuery('#sample-stop-words').text();
+                jQuery('#stop-words').val(stopWords);
+              } else if (step == 3) {  // the button
+                analyzeButton.trigger('click');
+              }
+            }
+          }
+        })
+        .foundation('joyride', 'start');
+
+
+      });
+
+      function setSampleText() {
+        console.log('set sample text');
+      }
+
+    </script>
+
+    <script id="sample-stop-words" type="text/plain">a, able, about, across, after, all, almost, also, am, among, an, and, any, are, as, at, be, because, been, but, by, can, can't, cannot, could, couldn't, dear, did, didn't, do, does, doesn't, don't, either, else, ever, every, for, from, get, got, had, hadn't, has, hasn't, have, haven't, he, he'd, he's, her, hers, him, his, how, however, I, I'd, I've, if, in, into, is, it, it's, its, just, least, let, like, likely, may, me, might, most, must, my, neither, no, nor, not, of, off, often, on, only, or, other, ought, our, own, rather, said, shall, she, she'd, she's, should, shouldn't, since, so, some, than, that, the, their, them, then, there, these, they, they'd, they've, this, to, too, us, wants, was, we, we'd, we've, were, weren't, what, when, where, which, while, who, whom, why, will, with, would, wouldn't, yet, you, you'd, you've, your</script>
+
+    <script id="declaration-of-human-rights" type="text/plain">Article 1.
 
 All human beings are born free and equal in dignity and rights. They are endowed with reason and conscience and should act towards one another in a spirit of brotherhood.
 
@@ -163,131 +335,7 @@ Article 29.
 
 Article 30.
 
-Nothing in this Declaration may be interpreted as implying for any State, group or person any right to engage in any activity or to perform any act aimed at the destruction of any of the rights and freedoms set forth herein.
-      </textarea>
-    </div>
-    <div id="stop-words-container" class="large-3 columns">
-      <h4>Stop Words</h4>
-      <textarea id="stop-words">
-a, able, about, across, after, all, almost, also, am, among, an, and, any, are, as, at, be, because, been, but, by, can, can't, cannot, could, couldn't, dear, did, didn't, do, does, doesn't, don't, either, else, ever, every, for, from, get, got, had, hadn't, has, hasn't, have, haven't, he, he'd, he's, her, hers, him, his, how, however, I, I'd, I've, if, in, into, is, it, it's, its, just, least, let, like, likely, may, me, might, most, must, my, neither, no, nor, not, of, off, often, on, only, or, other, ought, our, own, rather, said, shall, she, she'd, she's, should, shouldn't, since, so, some, than, that, the, their, them, then, there, these, they, they'd, they've, this, to, too, us, wants, was, we, we'd, we've, were, weren't, what, when, where, which, while, who, whom, why, will, with, would, wouldn't, yet, you, you'd, you've, your
-      </textarea>
-    </div>
-  </div>
-
-  <div class="row">
-    <div class="large-12 columns">
-      <a id="analyze" href="#" class="button expand">Analyze Frequencies</a>
-    </div>
-  <div class="row">
-    <div id="frequencies-container" style="display: none" class="large-12 columns">
-      <h4>Frequency Analysis</h4>
-      <table id="frequencies">
-        <thead>
-          <tr>
-            <th>Word</th>
-            <th>Count</th>
-          </td>
-        </thead>
-        <tbody>
-        </tbody>
-      </table>
-    </div>
-  </div>
-
-  <script src="//cdnjs.cloudflare.com/ajax/libs/underscore.js/1.7.0/underscore-min.js"></script>
-  <script src="//code.jquery.com/jquery-1.11.1.min.js"></script>
-  <script src="//cdnjs.cloudflare.com/ajax/libs/backbone.js/1.1.2/backbone-min.js"></script>
-  <script src="harmony-collections.min.js"></script>
-    <script>
-
-      // polyfill String#trim
-      if (!String.prototype.trim) {
-        (function(){
-          // Make sure we trim BOM and NBSP
-          var rtrim = /^[\s\uFEFF\xA0]+|[\s\uFEFF\xA0]+$/g;
-          String.prototype.trim = function () {
-            return this.replace(rtrim, "");
-          }
-        })();
-      }
-
-      function tokenize(text) {
-        text = text.toLowerCase();
-        text = text.replace(/--|–|—/, ' '); // treat dashes as word boundaries
-
-        text = text.trim();
-        var words = text.split(/\s+/);
-
-        words = _(words).map(function(word) {
-          word = word.replace(/^\W*/, '');  // remove all leading non-word characters
-          word = word.replace(/\W*$/, '');  // remove all trailing non-word characters
-          return word;
-        });
-
-        return words;
-      }
-
-      jQuery(function(){
-
-        var analyzeButton = $('#analyze');
-
-        analyzeButton.on('click', function(event) {
-          event.preventDefault();
-
-          var textElem = $('#text');
-          var text = textElem.val();
-          var words = tokenize(text);
-
-          var stopWordsElem = $('#stop-words');
-          var stopWords = new Set(tokenize(stopWordsElem.val()));
-
-          words = _(words).reject(function(word) {
-            return stopWords.has(word) ||    // in the list of stop words
-              word.match(/^\d+(\.\d+)?$/);   // numeric word like 343 and 3.43
-          });
-
-          var frequenciesByWord = _.chain(words)
-            .countBy(function(word){
-              return word;
-            })
-
-          var frequenciesByCount = _.chain(frequenciesByWord)
-            .pairs()
-            .reduce(function(h, word_and_count){
-              var word = word_and_count[0];
-              var count = word_and_count[1];
-              if (!h[count]) {
-                h[count] = [];
-              }
-              h[count].push(word);
-              return h;
-            }, {});
-
-
-          var tbody = jQuery('<tbody></tbody>');
-          var rowTemplate = _.template("<tr><td><%- word %></td><td><%= count %></td></tr>");
-          _.chain(frequenciesByCount)
-            .pairs()
-            .sortBy(function(count_and_words) {
-              var count = count_and_words[0];
-              return -count;
-            })
-            .each(function(count_and_words) {
-              var count = count_and_words[0];
-              var words = count_and_words[1];
-              words.sort();
-              _(words).each(function(word) {
-                var rowHtml = rowTemplate({count: count, word: word});
-                jQuery(rowHtml).appendTo(tbody);
-              });
-            });
-
-          jQuery('#frequencies tbody').replaceWith(tbody);
-          $('#frequencies-container').show();
-        });
-      });
-
-    </script>
+Nothing in this Declaration may be interpreted as implying for any State, group or person any right to engage in any activity or to perform any act aimed at the destruction of any of the rights and freedoms set forth herein.</script>
   </body>
 </html>
 
