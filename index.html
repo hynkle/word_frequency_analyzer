@@ -6,8 +6,12 @@
     <link rel="styleesheet" href="//cdnjs.cloudflare.com/ajax/libs/foundation/5.4.7/css/normalize.min.css">
     <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/foundation/5.4.7/css/foundation.min.css">
     <style>
-      #text-container textarea {
+      #text, #stop-words {
         height: 250px;
+      }
+
+      #frequencies {
+        width: 100%;
       }
     </style>
   </head>
@@ -21,7 +25,7 @@
   <div class="row">
     <div id="text-container" class="large-9 columns">
       <h4>Text</h4>
-      <textarea>
+      <textarea id="text">
 Article 1.
 
 All human beings are born free and equal in dignity and rights. They are endowed with reason and conscience and should act towards one another in a spirit of brotherhood.
@@ -164,18 +168,36 @@ Nothing in this Declaration may be interpreted as implying for any State, group 
     </div>
     <div id="stop-words-container" class="large-3 columns">
       <h4>Stop Words</h4>
+      <textarea id="stop-words">
+a, able, about, across, after, all, almost, also, am, among, an, and, any, are, as, at, be, because, been, but, by, can, can't, cannot, could, couldn't, dear, did, didn't, do, does, doesn't, don't, either, else, ever, every, for, from, get, got, had, hadn't, has, hasn't, have, haven't, he, he'd, he's, her, hers, him, his, how, however, I, I'd, I've, if, in, into, is, it, it's, its, just, least, let, like, likely, may, me, might, most, must, my, neither, no, nor, not, of, off, often, on, only, or, other, ought, our, own, rather, said, shall, she, she'd, she's, should, shouldn't, since, so, some, than, that, the, their, them, then, there, these, they, they'd, they've, this, to, too, us, wants, was, we, we'd, we've, were, weren't, what, when, where, which, while, who, whom, why, will, with, would, wouldn't, yet, you, you'd, you've, your
+      </textarea>
     </div>
   </div>
 
   <div class="row">
-    <div id="frequencies-container" class="large-12 columns">
+    <div class="large-12 columns">
+      <a id="analyze" href="#" class="button expand">Analyze Frequencies</a>
+    </div>
+  <div class="row">
+    <div id="frequencies-container" style="display: none" class="large-12 columns">
       <h4>Frequency Analysis</h4>
+      <table id="frequencies">
+        <thead>
+          <tr>
+            <th>Word</th>
+            <th>Count</th>
+          </td>
+        </thead>
+        <tbody>
+        </tbody>
+      </table>
     </div>
   </div>
 
   <script src="//cdnjs.cloudflare.com/ajax/libs/underscore.js/1.7.0/underscore-min.js"></script>
   <script src="//code.jquery.com/jquery-1.11.1.min.js"></script>
   <script src="//cdnjs.cloudflare.com/ajax/libs/backbone.js/1.1.2/backbone-min.js"></script>
+  <script src="harmony-collections.min.js"></script>
     <script>
 
       // polyfill String#trim
@@ -189,55 +211,83 @@ Nothing in this Declaration may be interpreted as implying for any State, group 
         })();
       }
 
+      function tokenize(text) {
+        text = text.toLowerCase();
+        text = text.replace(/--|–|—/, ' '); // treat dashes as word boundaries
 
-      window.App = {};
-      window.App.Models = {};
+        text = text.trim();
+        var words = text.split(/\s+/);
 
+        words = _(words).map(function(word) {
+          word = word.replace(/^\W*/, '');  // remove all leading non-word characters
+          word = word.replace(/\W*$/, '');  // remove all trailing non-word characters
+          return word;
+        });
 
-      App.Models.Tekst = Backbone.Model.extend({
+        return words;
+      }
 
-        initialize: function() {
-          // keep the model's `text` attribute synced to the
-          // value of the DOM's textarea
-          $(this.get('elem')).on('change', (function(_this) {
-            return function(event) {
-              var newText = $(event.target).val();
-              _this.set('text', newText);
-            };
-          })(this));
-        },
+      jQuery(function(){
 
-        tokens: function() {
-          var text = this.get('text');
+        var analyzeButton = $('#analyze');
 
-          text = text.toLowerCase();
-          text = text.replace(/--|–|—/, ' '); // treat dashes as word boundaries
+        analyzeButton.on('click', function(event) {
+          event.preventDefault();
 
-          text = text.trim();
-          var words = text.split(/\s+/);
+          var textElem = $('#text');
+          var text = textElem.val();
+          var words = tokenize(text);
 
-          words = _(words).map(function(word) {
-            word = word.replace(/^\W*/, '');  // remove all leading non-word characters
-            word = word.replace(/\W*$/, '');  // remove all trailing non-word characters
-            return word;
+          var stopWordsElem = $('#stop-words');
+          var stopWords = new Set(tokenize(stopWordsElem.val()));
+
+          words = _(words).reject(function(word) {
+            return stopWords.has(word) ||    // in the list of stop words
+              word.match(/^\d+(\.\d+)?$/);   // numeric word like 343 and 3.43
           });
 
-          return words;
-        },
+          var frequenciesByWord = _.chain(words)
+            .countBy(function(word){
+              return word;
+            })
 
-        text: function() {
-          jQuery(this.get('elem')).val();
-        }
+          var frequenciesByCount = _.chain(frequenciesByWord)
+            .pairs()
+            .reduce(function(h, word_and_count){
+              var word = word_and_count[0];
+              var count = word_and_count[1];
+              if (!h[count]) {
+                h[count] = [];
+              }
+              h[count].push(word);
+              return h;
+            }, {});
+
+
+          var tbody = jQuery('<tbody></tbody>');
+          var rowTemplate = _.template("<tr><td><%- word %></td><td><%= count %></td></tr>");
+          _.chain(frequenciesByCount)
+            .pairs()
+            .sortBy(function(count_and_words) {
+              var count = count_and_words[0];
+              return -count;
+            })
+            .each(function(count_and_words) {
+              var count = count_and_words[0];
+              var words = count_and_words[1];
+              words.sort();
+              _(words).each(function(word) {
+                var rowHtml = rowTemplate({count: count, word: word});
+                jQuery(rowHtml).appendTo(tbody);
+              });
+            });
+
+          jQuery('#frequencies tbody').replaceWith(tbody);
+          $('#frequencies-container').show();
+        });
       });
 
-      var TextView = Backbone.View.extend({
-      });
-      
-
-      var text = new App.Models.Tekst({
-        elem: $('#text-container textarea')
-      });
-
-  </script>
+    </script>
   </body>
 </html>
+
