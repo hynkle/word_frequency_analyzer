@@ -3,8 +3,8 @@
   <head>
     <meta charset="utf-8">
     <title>word frequency analyzer</title>
-    <link rel="styleesheet" href="//cdnjs.cloudflare.com/ajax/libs/foundation/5.4.7/css/normalize.min.css">
-    <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/foundation/5.4.7/css/foundation.min.css">
+    <link rel="styleesheet" href="normalize.min.css">
+    <link rel="stylesheet" href="foundation.min.css">
     <style>
       #text, #stop-words {
         height: 250px;
@@ -17,69 +17,68 @@
   </head>
   <body>
 
-  <div class="row">
-    <div class="large-12 columns">
-      <h1>Word Frequency Analyzer</h1>
+    <div class="row">
+      <div class="large-12 columns">
+        <h1>Word Frequency Analyzer</h1>
+      </div>
     </div>
-  </div>
-  <div class="row">
-    <div id="text-container" class="large-9 columns">
-      <h4>Text</h4>
-      <textarea id="text"></textarea>
+    <div class="row">
+      <div id="text-container" class="large-9 columns">
+        <h4>Text</h4>
+        <textarea id="text"></textarea>
+      </div>
+      <div id="stop-words-container" class="large-3 columns">
+        <h4>Stop Words</h4>
+        <textarea id="stop-words"></textarea>
+      </div>
     </div>
-    <div id="stop-words-container" class="large-3 columns">
-      <h4>Stop Words</h4>
-      <textarea id="stop-words"></textarea>
-    </div>
-  </div>
 
-  <div class="row">
-    <div class="large-12 columns">
-      <a id="analyze" href="#" class="button expand">Analyze Frequencies</a>
+    <div class="row">
+      <div class="large-12 columns">
+        <a id="analyze" href="#" class="button expand">Analyze Frequencies</a>
+      </div>
+    <div class="row">
+      <div id="frequencies-container" style="display: none" class="large-12 columns">
+        <h4>Frequency Analysis</h4>
+        <table id="frequencies">
+          <thead>
+            <tr>
+              <th>Word</th>
+              <th>Count</th>
+            </td>
+          </thead>
+          <tbody>
+          </tbody>
+        </table>
+      </div>
     </div>
-  <div class="row">
-    <div id="frequencies-container" style="display: none" class="large-12 columns">
-      <h4>Frequency Analysis</h4>
-      <table id="frequencies">
-        <thead>
-          <tr>
-            <th>Word</th>
-            <th>Count</th>
-          </td>
-        </thead>
-        <tbody>
-        </tbody>
-      </table>
-    </div>
-  </div>
 
-  <ol class="joyride-list" data-joyride>
-    <li data-button="All right!" data-options="prev_button: false">
-      <p>This tool isn't particularly complicated, but let me take you on a quick tour.</p>
-    </li>
-    <li data-id="text" data-text="Next" data-options="tip_location: left" data-prev-text="Previous">
-      <p>First, paste the text you'd like to analyze here.  I'll start you out with the UN's Universal Declaration of Human Rights.</p>
-    </li>
-    <li data-id="stop-words" data-text="Next" data-options="tip_location: right" data-prev-text="Previous">
-      <p>Enter a list of stop words (words you don't care about) here. You can separate them with newlines or spaces. I'll start you out with a sensible list of defaults.</p>
-    </li>
-    <li data-id="analyze" data-button="Next" data-prev-text="Previous" data-options="tip_location:top;tip_animation:fade">
-      <p>Click the big button.</p>
-    </li>
-    <li data-id="frequencies" data-button="Next" data-prev-text="Previous" data-options="tip_location:top;tip_animation:fade">
-      <p>The frequency analysis will show up below.</p>
-    </li>
-    <li data-button="Sounds good!" data-prev-text="Previous">
-      <p>Anytime you change the text or the stop words, just hit the button again and the analysis will be re-run.</p>
-    </li>
-  </ol>
+    <ol class="joyride-list" data-joyride>
+      <li data-button="All right!" data-options="prev_button: false">
+        <p>This tool isn't particularly complicated, but let me take you on a quick tour.</p>
+      </li>
+      <li data-id="text" data-text="Next" data-options="tip_location: left" data-prev-text="Previous">
+        <p>First, paste the text you'd like to analyze here.  I'll start you out with the UN's Universal Declaration of Human Rights.</p>
+      </li>
+      <li data-id="stop-words" data-text="Next" data-options="tip_location: right" data-prev-text="Previous">
+        <p>Enter a list of stop words (words you don't care about) here. You can separate them with newlines or spaces. I'll start you out with a sensible list of defaults.</p>
+      </li>
+      <li data-id="analyze" data-button="Next" data-prev-text="Previous" data-options="tip_location:top;tip_animation:fade">
+        <p>Click the big button.</p>
+      </li>
+      <li data-id="frequencies" data-button="Next" data-prev-text="Previous" data-options="tip_location:top;tip_animation:fade">
+        <p>The frequency analysis will show up below.</p>
+      </li>
+      <li data-button="Sounds good!" data-prev-text="Previous">
+        <p>Anytime you change the text or the stop words, just hit the button again and the analysis will be re-run.</p>
+      </li>
+    </ol>
 
-  <script src="//cdnjs.cloudflare.com/ajax/libs/underscore.js/1.7.0/underscore-min.js"></script>
-  <script src="//code.jquery.com/jquery-1.11.1.min.js"></script>
-  <script src="//cdnjs.cloudflare.com/ajax/libs/backbone.js/1.1.2/backbone-min.js"></script>
-  <script src="//cdnjs.cloudflare.com/ajax/libs/foundation/5.4.7/js/foundation.min.js"></script>
-  <script src="//cdnjs.cloudflare.com/ajax/libs/foundation/5.4.7/js/foundation/foundation.joyride.min.js"></script>
-  <script src="harmony-collections.min.js"></script>
+    <script src="underscore-min.js"></script>
+    <script src="jquery.min.js"></script>
+    <script src="foundation.min.js"></script>
+    <script src="foundation.joyride.min.js"></script>
+    <script src="harmony-collections.min.js"></script>
     <script>
 
       // polyfill String#trim
