@@ -130,7 +130,15 @@
           var text = textElem.val();
           var words = tokenize(text);
 
-          var stopWords = new Set(tokenize(stopWordsElem.val()));
+          var stopTokens = tokenize(stopWordsElem.val());
+          console.log(stopTokens);
+
+          // go SAFARI, for being such an idiot that I can't just
+          // pass the array into the constructor
+          var stopWords = new Set();
+          _(stopTokens).each(function(word) {
+            stopWords.add(word);
+          });
 
           words = _(words).reject(function(word) {
             return stopWords.has(word) ||       // in the list of stop words
